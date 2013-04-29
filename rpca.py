@@ -74,7 +74,7 @@ def robust_pca_cost(Y, Z, alpha):
     return nuclear_norm + alpha * l1_norm, nuclear_norm, l1_norm
 
 
-def robust_pca(X, alpha=1.0, max_iter=100, verbose=False):
+def robust_pca(X, alpha=None, max_iter=100, verbose=False):
     '''ADMM solver for robust PCA.
 
     min_Y  ||Y||_* + alpha * ||X-Y||_1
@@ -83,6 +83,7 @@ def robust_pca(X, alpha=1.0, max_iter=100, verbose=False):
 
         X        -- (ndarray) input data (d-by-n)
         alpha    -- (float>0) weight of the l1 penalty
+                    if unspecified, defaults to 1.0 / sqrt(max(d, n))
 
     Returns:
         Y        -- (ndarray) low-rank component of X
@@ -111,7 +112,11 @@ def robust_pca(X, alpha=1.0, max_iter=100, verbose=False):
     
     norm_X = scipy.linalg.norm(X)
     
+    if alpha is None:
+        alpha = max(X.shape)**(-0.5)
+
     m   = X.size
+
     _DIAG = {
          'err_primal': [],
          'err_dual':   [],
