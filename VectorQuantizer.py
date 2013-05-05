@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 class VectorQuantizer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, clusterer=None, n_atoms=32, sparse=True):
+    def __init__(self, clusterer=None, n_atoms=32, sparse=True, batch_size=2048):
         '''Vector quantization by closest centroid:
 
         A[i] == 1 <=> i = argmin ||X - C_i||
@@ -30,6 +30,9 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         sparse : bool
             Represent encoded data as a sparse matrix or ndarray
+
+        batch_size : int
+            Number of points to transform in parallel
         '''
 
         if clusterer is None:
@@ -38,6 +41,7 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
             self.clusterer = clusterer
 
         self.sparse = sparse
+        self.batch_size = batch_size
 
 
     def fit(self, X):
@@ -73,15 +77,22 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         C = self.clusterer.cluster_centers_
 
-        XC = np.dot(X, C.T) - self.center_norms_
+        n = X.shape[0]
+
+        hits = np.empty(n, dtype=np.uint16)
+
+        for j in range(0, n, self.batch_size):
+            j_end = min(n, j + self.batch_size)
+
+            XC = np.dot(X[j:j_end], C.T) - self.center_norms_
+            hits[j:j_end] = XC.argmax(axis=1)
 
         if self.sparse:
-            X_new = scipy.sparse.lil_matrix( (X.shape[0], C.shape[0]))
+            X_new = scipy.sparse.lil_matrix( (n, C.shape[0]))
         else:
-            X_new = np.zeros( (X.shape[0], C.shape[0]), dtype=bool )
+            X_new = np.zeros( (n, C.shape[0]), dtype=bool )
         
-        hits = XC.argmax(axis=1)
-        for i in range(X.shape[0]):
+        for i in range(n):
             X_new[i, hits[i]] = True
 
         if self.sparse:
