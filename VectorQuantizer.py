@@ -3,12 +3,13 @@
 # sklearn.decomposition container class for vector quantization 
 
 import numpy as np
+import scipy.sparse
 import sklearn.cluster
 from sklearn.base import BaseEstimator, TransformerMixin
 
 class VectorQuantizer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, clusterer=None, n_atoms=32):
+    def __init__(self, clusterer=None, n_atoms=32, sparse=True):
         '''Vector quantization by closest centroid:
 
         A[i] == 1 <=> i = argmin ||X - C_i||
@@ -26,12 +27,18 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         n_atoms : int
             If no clusterer is provided, the number of atoms to use
+
+        sparse : bool
+            Represent encoded data as a sparse matrix or ndarray
         '''
 
         if clusterer is None:
             self.clusterer = sklearn.cluster.MiniBatchKMeans(k=n_atoms)
         else:
             self.clusterer = clusterer
+
+        self.sparse = sparse
+
 
     def fit(self, X):
         '''Fit the codebook to the data
@@ -68,10 +75,16 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         XC = np.dot(X, C.T) - self.center_norms_
 
-        X_new = np.zeros( (X.shape[0], C.shape[0]), dtype=bool )
+        if self.sparse:
+            X_new = scipy.sparse.lil_matrix( (X.shape[0], C.shape[0]))
+        else:
+            X_new = np.zeros( (X.shape[0], C.shape[0]), dtype=bool )
         
         hits = XC.argmax(axis=1)
         for i in range(X.shape[0]):
             X_new[i, hits[i]] = True
+
+        if self.sparse:
+            X_new = X_new.tocsc()
 
         return X_new
