@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 class VectorQuantizer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, clusterer=None, n_atoms=32, sparse=True, batch_size=2048):
+    def __init__(self, clusterer=None, n_atoms=32, sparse=True, batch_size=1024):
         '''Vector quantization by closest centroid:
 
         A[i] == 1 <=> i = argmin ||X - C_i||
@@ -58,8 +58,7 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
         '''
         
         self.clusterer.fit(X)
-        C = self.clusterer.cluster_centers_
-        self.center_norms_ = 0.5 * np.diag(np.dot(C, C.T))
+        self.center_norms_ = 0.5 * (self.clusterer.cluster_centers_**2).sum(axis=1)
         return self
 
     def transform(self, X):
