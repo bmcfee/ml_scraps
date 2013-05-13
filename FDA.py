@@ -42,6 +42,8 @@ class FDA(BaseEstimator, TransformerMixin):
         classes             = np.unique(Y)
         n_classes           = classes.size
 
+        assert(len(Y) == n)
+
         mean_global         = np.mean(X, axis=0, keepdims=True)
         cov_global          = np.cov(X, rowvar=0) + self.alpha * np.eye(d_orig)
 
