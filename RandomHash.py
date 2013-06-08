@@ -55,10 +55,17 @@ class RandomHash(BaseEstimator, TransformerMixin):
 
         # Fit the thresholds
         self.components_ = W
-        self.thresholds_ = np.array(
-                            scipy.stats.mstats.mquantiles(X.dot(W), 
+
+        thresholds = np.zeros(self.n_atoms)
+
+        for i in range(self.n_atoms):
+
+            thresholds[i] = np.array(
+                            scipy.stats.mstats.mquantiles(X.dot(W[:,i]), 
                                                         prob=[self.quantile],
                                                         axis=0))
+        self.thresholds_ = thresholds
+
         return self
 
     def transform(self, X):
