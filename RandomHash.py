@@ -4,6 +4,7 @@
 
 import numpy as np
 import scipy.stats
+import scipy.sparse
 from sklearn.base import BaseEstimator, TransformerMixin
 
 class RandomHash(BaseEstimator, TransformerMixin):
@@ -86,7 +87,7 @@ class RandomHash(BaseEstimator, TransformerMixin):
 
 class RandomHashCascade(BaseEstimator, TransformerMixin):
 
-    def __init__(self, n_layers=3, n_atoms=64, quantile=0.5, projection='gaussian'):
+    def __init__(self, n_layers=3, n_atoms=64, quantile=0.5, projection='gaussian', sparse=False):
         '''Random hash cascade
 
         Parameters
@@ -102,6 +103,9 @@ class RandomHashCascade(BaseEstimator, TransformerMixin):
 
         projection : str or list-like
             Projection form for each layer in the cascade
+
+        sparse : boolean
+            Sparsify the output?
         '''
 
         self.n_layers   = n_layers
@@ -115,6 +119,7 @@ class RandomHashCascade(BaseEstimator, TransformerMixin):
         self.n_atoms    = _listify(n_atoms)
         self.quantile   = _listify(quantile)
         self.projection = _listify(projection)
+        self.sparse     = sparse
 
     def fit(self, X):
         '''Fit the random hash cascade
@@ -159,5 +164,8 @@ class RandomHashCascade(BaseEstimator, TransformerMixin):
 
         for H in self.hashes_:
             X_new = H.transform(X_new)
+
+        if self.sparse:
+            X_new = scipy.sparse.csr_matrix(X_new)
 
         return X_new
