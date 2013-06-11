@@ -146,13 +146,16 @@ class RandomHashCascade(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X, k=None):
         '''Transform data through the random hash cascade
 
         Parameters
         ----------
         X : array, shape (n_samples, n_features)
             Data to be transformed
+
+        k : int>0 or None
+            If not none, return transformation at layer k
 
         Returns
         -------
@@ -162,7 +165,10 @@ class RandomHashCascade(BaseEstimator, TransformerMixin):
 
         X_new = X
 
-        for H in self.hashes_:
+        if k is None:
+            k = len(self.hashes_)
+
+        for H in self.hashes_[:k]:
             X_new = H.transform(X_new)
 
         if self.sparse:
