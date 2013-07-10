@@ -59,7 +59,17 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
         
         self.clusterer.fit(X)
         self.center_norms_ = 0.5 * (self.clusterer.cluster_centers_**2).sum(axis=1)
+        self.components_ = self.clusterer.cluster_centers_
+
         return self
+
+    def partial_fit(self, X):
+        self.clusterer.partial_fit(X)
+        self.center_norms_ = 0.5 * (self.clusterer.cluster_centers_**2).sum(axis=1)
+        self.components_ = self.clusterer.cluster_centers_
+
+        return self
+
 
     def transform(self, X):
         '''Encode the data by VQ.
