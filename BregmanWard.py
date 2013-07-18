@@ -106,6 +106,12 @@ class BregmanWard(BaseEstimator):
                 make_new_merge(i, j)
 
 
+        childmap = {}
+        for i in range(n):
+            childmap[i] = i
+
+        self.children_ = []
+
         while len(active) > 1:
 
             while True:
@@ -121,6 +127,9 @@ class BregmanWard(BaseEstimator):
             active.add(sm)
             
             sequence.append(sm)
+
+            childmap[sm] = len(childmap)
+            self.children_.append( [ childmap[s1], childmap[s2] ] )
 
             # Update the links, in case things have changed
             E[sm] = (E[s1] | E[s2]) - set([s1, s2])
@@ -140,10 +149,14 @@ class BregmanWard(BaseEstimator):
             node = leaves.pop(0)
             leaves.extend(list(children[node]))
 
-        self.labels_ = range(n)
+        self.n_leaves_ = n
+
+        self.labels_ = np.arange(n)
         for (label, leaf) in enumerate(leaves[::-1]):
             for x in containers[leaf]:
                 self.labels_[x] = label
+
+        self.children_ = np.array(self.children_)
 
         # Purge the intermediate nodes we constructed
         while len(X) > n:
