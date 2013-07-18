@@ -8,7 +8,7 @@ class BregmanWard(BaseEstimator):
     '''Agglomerative Bregman divergence clustering.
     More or less implements the general method described in
 
-    Agglomerative Bregman Clustering, M. Telgarsky, ICML 2012.
+    Agglomerative Bregman Clustering. M. Telgarsky and S. Dasgupta, ICML 2012.
 
     This version also supports linkage constraints, which are useful for
     time-series segmentation.
