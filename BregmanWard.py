@@ -6,7 +6,12 @@ from sklearn.base import BaseEstimator
 
 class BregmanWard(BaseEstimator):
     '''Agglomerative Bregman divergence clustering.
-    Inspired by 
+    More or less implements the general method described in
+
+    Agglomerative Bregman Clustering, M. Telgarsky, ICML 2012.
+
+    This version also supports linkage constraints, which are useful for
+    time-series segmentation.
     '''
 
     def __init__(self, n_clusters=2, connectivity=None):
