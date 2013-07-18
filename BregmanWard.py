@@ -214,6 +214,42 @@ class Gaussian(object):
         cov = cov - np.outer(mean, mean)
         return Gaussian(mean, cov, n)
 
+class DiagonalGaussian(object):
+    '''A container class for diagonal-covariance Gaussians'''
+
+    def __init__(self, mean, var, n=1):
+        self.mean   = mean
+        self.var    = var
+        self.n      = n
+
+        self.dim    = len(mean)
+        self.ivar   = var**-1.0
+        self.ldvar  = np.sum(np.log(var))
+
+    def distance(self, other):
+
+        mudiff = other.mean - self.mean
+        
+        D = np.sum(other.ivar * self.var)       \
+          + mudiff.dot(other.ivar * mudiff)  \
+          - self.dim                            \
+          - self.ldvar + other.ldvar
+
+        return D / 2.0
+
+    def merge(self, other):
+
+        n = self.n + other.n
+        
+        mean = (self.n * self.mean + other.n * other.mean) / n
+        
+        var = (self.n * (self.var + self.mean**2 ) \
+            + other.n * (other.var + other.mean**2)) / n
+        
+        var = var - mean**2
+
+        return DiagonalGaussian(mean, var, n)
+
 class Multinomial(object):
     '''A container class for multinomial models'''
 
