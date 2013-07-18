@@ -81,7 +81,7 @@ class BregmanWard(BaseEstimator):
             # Evaluate the cost of this cluster node
             cost        = X[i].n * X[i].distance(new_v) + X[j].n * X[j].distance(new_v)
             # Generate the new linkage constraints
-            new_edge    = (E[i] | E[j]) - (containers[i] | containers[j] | set([i,j]))
+            new_edge    = set() #(E[i] | E[j]) - (containers[i] | containers[j] | set([i,j]))
             # Find its constituents
             new_cont    = containers[i] | containers[j]
                 
@@ -145,13 +145,24 @@ class BregmanWard(BaseEstimator):
             for x in containers[leaf]:
                 self.labels_[x] = label
 
-        X = X[:n]
+        # Purge the intermediate nodes we constructed
+        while len(X) > n:
+            X.pop()
 
 
 class Gaussian(object):
     '''A container class for gaussian models'''
     
     def __init__(self, mean, cov, n=1):
+        '''
+        :parameters:
+        - mean  : array (d,1)
+          mean vector
+        - cov : array (d,d)
+          covariance matrix
+        - n : int
+          sample size
+        '''
         self.mean    = mean
         self.cov     = cov
         self.n       = n
@@ -161,7 +172,11 @@ class Gaussian(object):
         self.ldcov   = np.log(scipy.linalg.det(self.cov))
     
     def distance(self, other):
-        ''' Compute the KL-divergence from self to other '''
+        ''' Compute the KL-divergence D(self || other)
+
+        :parameters:
+        - other : Gaussian
+        '''
         
         mudiff = other.mean - self.mean
         
@@ -185,3 +200,36 @@ class Gaussian(object):
         
         cov = cov - np.outer(mean, mean)
         return Gaussian(mean, cov, n)
+
+class Multinomial(object):
+    '''A container class for multinomial models'''
+
+    def __init__(self, p, n=1):
+        '''
+        :parameters:
+        - p : array
+          The distribution
+        - n : int
+          Sample size
+        '''
+    
+        # Just to ensure that we have a distribution
+        p = np.maximum(p, 0.0)
+        p = p / p.sum()
+
+        self.p      = p
+        self.logp   = np.log(p + (p==0))
+        self.n      = n
+        self.dim    = len(p)
+
+
+    def distance(self, other):
+        
+        return self.p.dot(self.logp - other.logp)
+
+    def merge(self, other):
+
+        n = self.n + other.n
+        p = (self.n * self.p + other.n * other.p) / n
+
+        return Multinomial(p, n)
