@@ -242,17 +242,16 @@ class Gaussian(object):
         cov = cov - np.outer(mean, mean)
         return Gaussian(mean, cov, n)
 
-    def get_smooth(X, isotropic=False):
+    def get_smooth(X):
         
+        # Plug-in bandwidth estimator
+        # Bowman and Azzalini, 1997
+        # Section 2.4.2, page 32
         n, d = X.shape
+        h = (4.0/((d+2)* n))**(1.0/(d+4))
+        sigma = np.std(X, axis=0)
+        return np.diag(h * sigma)
 
-        scale = (4.0/(3.0 * n))**(0.2)
-        if isotropic:
-            sigma = np.std(X) * np.ones(d)
-        else:
-            sigma = np.std(X, axis=0)
-
-        return np.diag(scale * sigma)
     # Make this into a static method
     get_smooth = _Callable(get_smooth)
 
@@ -300,14 +299,10 @@ class DiagonalGaussian(object):
     def get_smooth(X, isotropic=False):
         
         n, d = X.shape
+        h = (4.0/((d+2)* n))**(1.0/(d+4))
+        sigma = np.std(X, axis=0)
 
-        scale = (4.0/(3.0 * n))**(0.2)
-        if isotropic:
-            sigma = np.std(X) * np.ones(d)
-        else:
-            sigma = np.std(X, axis=0)
-
-        return scale * sigma
+        return h * sigma
     # Make this into a static method
     get_smooth = _Callable(get_smooth)
 
