@@ -14,7 +14,7 @@ class BregmanWard(BaseEstimator):
     time-series segmentation.
     '''
 
-    def __init__(self, n_clusters=2, connectivity=None):
+    def __init__(self, n_clusters=2, connectivity=None, model='gaussian'):
         '''
         :parameters:
         - n_clusters : int
@@ -24,6 +24,9 @@ class BregmanWard(BaseEstimator):
             Connectivity graph ala sklearn.feature_extraction.image.grid_to_graph()
             If 'None', a fully connected (ie, unstructured) graph will be generated.
 
+        - model : str, {'gaussian', 'diagonal-gaussian', 'multinomial'}
+            Model family to use for clustering.
+
         :variables:
         - labels_ : array
             Cluster assignments after fitting the model
@@ -31,14 +34,30 @@ class BregmanWard(BaseEstimator):
         self.n_clusters     = n_clusters
         self.connectivity   = connectivity
 
+        if model == 'gaussian':
+            self.model = Gaussian
+        elif model == 'diagonal-gaussian':
+            self.model = DiagonalGaussian
+        elif model == 'multinomial':
+            self.model = Multinomial
+        else:
+            raise ValueError('Invalid model type: ' + model)
+
+    def build_models(self, X):
+
+        S = self.model.get_smooth(X)
+
+        return [self.model(xi, n=1, smoothing=S) for xi in X]
+
     def fit(self, X):
         '''
         :parameters:
-            - X : list
-              A list of n bottom-level exponential family model objects.
-              Model objects must implement the 'merge' and 'distance' methods.
+            - X : ndarray, size=(n, d)
+              The data to be clustered
 
         '''
+
+        X = self.build_models(X)
 
         n = len(X)
 
@@ -162,11 +181,15 @@ class BregmanWard(BaseEstimator):
         while len(X) > n:
             X.pop()
 
+class _Callable:
+    def __init__(self, fun):
+        self.__call__ = fun
+
 
 class Gaussian(object):
     '''A container class for gaussian models'''
     
-    def __init__(self, mean, cov, n=1):
+    def __init__(self, mean, cov=0.0, n=1, smoothing=None):
         '''
         :parameters:
         - mean  : array (d,1)
@@ -175,13 +198,18 @@ class Gaussian(object):
           covariance matrix
         - n : int
           sample size
+        - smoothing : array (d, d)
+          smoothing values for bottom-level models. Gets added to covariance.
         '''
         self.mean    = mean
-        self.cov     = cov
+        self.cov     = cov 
         self.n       = n
+
+        if smoothing is not None:
+            self.cov = self.cov + smoothing
         
         self.dim     = len(mean)
-        self.icov    = scipy.linalg.inv(cov)
+        self.icov    = scipy.linalg.inv(self.cov)
         self.ldcov   = np.log(scipy.linalg.det(self.cov))
     
     def distance(self, other):
@@ -214,17 +242,36 @@ class Gaussian(object):
         cov = cov - np.outer(mean, mean)
         return Gaussian(mean, cov, n)
 
+    def get_smooth(X, isotropic=False):
+        
+        n, d = X.shape
+
+        scale = (4.0/(3.0 * n))**(0.2)
+        if isotropic:
+            sigma = np.std(X) * np.ones(d)
+        else:
+            sigma = np.std(X, axis=0)
+
+        return np.diag(scale * sigma)
+    # Make this into a static method
+    get_smooth = _Callable(get_smooth)
+
+
+
 class DiagonalGaussian(object):
     '''A container class for diagonal-covariance Gaussians'''
 
-    def __init__(self, mean, var, n=1):
+    def __init__(self, mean, var=0.0, n=1, smoothing=None):
         self.mean   = mean
         self.var    = var
         self.n      = n
 
+        if smoothing is not None:
+            self.var = self.var + smoothing
+
         self.dim    = len(mean)
-        self.ivar   = var**-1.0
-        self.ldvar  = np.sum(np.log(var))
+        self.ivar   = self.var**-1.0
+        self.ldvar  = np.sum(np.log(self.var))
 
     def distance(self, other):
 
@@ -250,10 +297,25 @@ class DiagonalGaussian(object):
 
         return DiagonalGaussian(mean, var, n)
 
+    def get_smooth(X, isotropic=False):
+        
+        n, d = X.shape
+
+        scale = (4.0/(3.0 * n))**(0.2)
+        if isotropic:
+            sigma = np.std(X) * np.ones(d)
+        else:
+            sigma = np.std(X, axis=0)
+
+        return scale * sigma
+    # Make this into a static method
+    get_smooth = _Callable(get_smooth)
+
+
 class Multinomial(object):
     '''A container class for multinomial models'''
 
-    def __init__(self, p, n=1):
+    def __init__(self, p, n=1, smoothing=None):
         '''
         :parameters:
         - p : array
@@ -262,6 +324,9 @@ class Multinomial(object):
           Sample size
         '''
     
+        if smoothing is not None:
+            p = p + smoothing
+
         # Just to ensure that we have a distribution
         p = np.maximum(p, 0.0)
         p = p / p.sum()
@@ -282,3 +347,14 @@ class Multinomial(object):
         p = (self.n * self.p + other.n * other.p) / n
 
         return Multinomial(p, n)
+
+    def get_smooth(X):
+        
+        n, d = X.shape
+
+        return 1.0/n + np.sqrt( (1.0/d) * (1.0 - 1.0/d) / n)
+
+    # Make this into a static method
+    get_smooth = _Callable(get_smooth)
+
+
