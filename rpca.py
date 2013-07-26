@@ -24,7 +24,7 @@ def nuclear_prox(A, r=1.0):
     Y = (U * T).dot(V)
     return Y
 
-def l1_prox(A, r=1.0):
+def l1_prox(A, r=1.0, nonneg=False):
     '''Proximal operator for entry-wise matrix l1 norm:
     Y* <- argmin_Y r * ||Y||_1 + 1/2 * ||Y - A||_F^2
 
@@ -32,28 +32,31 @@ def l1_prox(A, r=1.0):
         Arguments:
         A    -- (ndarray) input matrix
         r    -- (float>0) scaling factor
+        nonneg -- (bool) retain only the non-negative portion
 
     Returns:
         Y    -- (ndarray) Y = A after shrinkage
     '''
     
-    Y = np.empty_like(A)
+    Y = np.zeros_like(A)
     
     numel = A.size
     
     shrinkage = r"""
+    int NN = (int)nonneg;
+
     for (int i = 0; i < numel; i++) {
         Y[i] = 0;
 
         if (A[i] - r > 0) {
             Y[i] = A[i] - r;
-        } else if (A[i] + r <= 0) {
+        } else if (!NN && (A[i] + r <= 0)) {
             Y[i] = A[i] + r;
         }
     }
     """
     
-    scipy.weave.inline(shrinkage, ['numel', 'A', 'r', 'Y'])
+    scipy.weave.inline(shrinkage, ['numel', 'A', 'r', 'Y', 'nonneg'])
     return Y
 
 def robust_pca_cost(Y, Z, alpha):
@@ -74,7 +77,7 @@ def robust_pca_cost(Y, Z, alpha):
     return nuclear_norm + alpha * l1_norm, nuclear_norm, l1_norm
 
 
-def robust_pca(X, alpha=None, max_iter=100, verbose=False):
+def robust_pca(X, alpha=None, max_iter=100, verbose=False, nonneg=False):
     '''ADMM solver for robust PCA.
 
     min_Y  ||Y||_* + alpha * ||X-Y||_1
@@ -84,6 +87,8 @@ def robust_pca(X, alpha=None, max_iter=100, verbose=False):
         X        -- (ndarray) input data (d-by-n)
         alpha    -- (float>0) weight of the l1 penalty
                     if unspecified, defaults to 1.0 / sqrt(max(d, n))
+
+        nonneg   -- (bool) constrain to non-negative noise
 
     Returns:
         Y        -- (ndarray) low-rank component of X
@@ -128,7 +133,7 @@ def robust_pca(X, alpha=None, max_iter=100, verbose=False):
     for t in range(max_iter):
         Y = nuclear_prox(X - Z - W, 1.0/  rho)
         Z_old = Z.copy()
-        Z = l1_prox(X - Y - W, alpha /  rho)
+        Z = l1_prox(X - Y - W, alpha /  rho, nonneg)
         
         residual_pri  = Y + Z - X
         residual_dual = Z - Z_old
