@@ -4,7 +4,7 @@ import scipy.sparse
 
 from sklearn.base import BaseEstimator
 
-class BregmanWard(BaseEstimator):
+class Ward(BaseEstimator):
     '''Agglomerative Bregman divergence clustering.
     More or less implements the general method described in
 

@@ -135,6 +135,9 @@ def robust_pca(X, alpha=None, max_iter=100, verbose=False, nonneg=False):
         Z_old = Z.copy()
         Z = l1_prox(X - Y - W, alpha /  rho, nonneg)
         
+        if nonneg:
+            Z = np.maximum(Z, X)
+
         residual_pri  = Y + Z - X
         residual_dual = Z - Z_old
         
