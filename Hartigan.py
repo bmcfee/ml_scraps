@@ -2,7 +2,6 @@
 
 import numpy as np
 import scipy.sparse
-import scipy.linalg
 from sklearn.base import BaseEstimator
 
 class Hartigan(BaseEstimator):
@@ -91,7 +90,6 @@ class Hartigan(BaseEstimator):
             if sizes[i] > 0:
                 self.components_[i]     = np.mean(X[pts_i], axis=0)
 
-
         step = 0
 
         while self.max_iter is None or step < self.max_iter:
@@ -101,6 +99,10 @@ class Hartigan(BaseEstimator):
             for i in range(n):
                 l_old = labels[i]
 
+                # if the cluster is a singleton, skip it
+                if sizes[l_old] == 1:
+                    continue
+
                 # find the legal moves for point i
                 moves = list(set([labels[j] for j in E[i]]) - set([l_old]))
 
@@ -108,21 +110,18 @@ class Hartigan(BaseEstimator):
                 if not moves:
                     continue
                 
-                # if the cluster is a singleton, skip it
-                if sizes[l_old] == 1:
-                    continue
-
                 # Otherwise, compute the cost-delta of moving to each candidate
-                phi_old = sizes[l_old] * scipy.linalg.norm(self.components_[l_old] - X[i])**2 / (sizes[l_old] - 1.0)
+                phi_old = sizes[l_old] * np.sum((self.components_[l_old] - X[i])**2) / (sizes[l_old] - 1.0)
 
                 move_costs = []
                 for l_new in moves:
-                    phi_new = sizes[l_new] * scipy.linalg.norm(self.components_[l_new] - X[i])**2 / (sizes[l_new] + 1.0)
-                    move_costs.append((phi_new, l_new))
+                    phi_new = sizes[l_new] * np.sum((self.components_[l_new] - X[i])**2) / (sizes[l_new] + 1.0)
+                    move_costs.append((phi_old - phi_new,  l_new))
 
                 (cost_new, l_new) = max(move_costs)
-                if cost_new < phi_old:
-                    # If this swap does not increase quality, skip it
+                
+                # If the best move has negative value, skip it
+                if cost_new < 0:
                     continue
 
                 # Else, re-assign X[i] and update the clustering
