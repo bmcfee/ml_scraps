@@ -96,10 +96,10 @@ def robust_pca(X, alpha=None, max_iter=100, verbose=False, nonneg=False):
         diags    -- (dict)    diagnostic output
     '''
     
-    RHO_MIN      = 1e-2
+    RHO_MIN      = 1e-1
     RHO_MAX      = 1e6
     MAX_RATIO    = 1e1
-    SCALE_FACTOR = 2.0e0
+    SCALE_FACTOR = 3.0e0
     ABS_TOL      = 1e-4
     REL_TOL      = 1e-3
     

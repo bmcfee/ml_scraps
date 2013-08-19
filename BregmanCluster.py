@@ -186,6 +186,159 @@ class _Callable:
         self.__call__ = fun
 
 
+class Hartigan(BaseEstimator):
+    '''Hartigan clustering for Bregman divergences.
+
+    repeat until convergence:
+        for each point:
+            find the cluster assignment with largest cost improvement
+        
+    When a constraint graph is specified, each point can only move to clusters
+    containing one of its neighbors.
+
+    '''
+
+    def __init__(self, n_clusters=2, connectivity=None, model='gaussian', max_iter=100):
+        '''
+        :parameters:
+        - n_clusters : int
+            Number of clusters
+    
+        - connectivity : scipy.sparse.coo_matrix or None
+            Connectivity graph ala sklearn.feature_extraction.image.grid_to_graph()
+            If 'None', a fully connected (ie, unstructured) graph will be gnerated.
+    
+        - model : str, {'gaussian', 'diagonal-gaussian', 'multinomial'}
+            Model family to use for clustering.
+    
+    
+        - max_iter : int or None
+            Maximum number of passes through the data
+    
+        :variables:
+        - labels_ : array
+            Cluster assignments after fitting the model
+
+        - components_ : model
+            Estimated cluster centroids
+        '''
+
+        self.n_clusters     = n_clusters
+        self.connectivity   = connectivity
+        self.max_iter       = max_iter
+
+        if model == 'gaussian':
+            self.model = Gaussian
+        elif model == 'diagonal-gaussian':
+            self.model = DiagonalGaussian
+        elif model == 'multinomial':
+            self.model = Multinomial
+        else:
+            raise ValueError('Invalid model type: ' + model)
+
+    def build_models(self, X):
+        S = self.model.get_smooth(X)
+
+        return [self.model(xi, n=1, smoothing=S) for xi in X]
+
+    def fit(self, X, labels=None):
+        '''
+        :parameters:
+            - X : ndarray, sie=(n, d)
+              The data to be clustered
+
+            - labels : None, list-like size=n (int)
+              Optional list of initial cluster assignments.
+              If unspecified, will be initialized randomly.
+        
+        :note:
+            I using a connectivity graph, randomly initialized labels may not be
+            consistent with the constraints.
+
+        '''
+
+        X       = self.build_models(X)
+
+        n = len(X)
+
+        # Initialize the connectivity graph
+        if self.connectivity is None:
+            self.connectivity = scipy.sparse.coo_matrix(np.ones((n,n)))
+
+        # Initialize the labels
+        if labels is None:
+            labels = np.random.randint(low=0, high=self.n_clusters, size=n)
+        else:
+            labels = np.array(labels).flatten()
+
+        # Construct constraint graph
+        E = [set() for i in range(n)]
+        for (i, j) in np.vstack(self.connectivity.nonzer()).T:
+            E[i].add(j)
+            E[j].add(i)
+
+        # Initialize cluster centers
+        self.components_ = []
+        costs = np.zeros(self.n_clusters)
+
+        for i in range(self.n_clusters):
+            C = None
+            pts_i = np.argwhere(labels == i).flatten()
+            for j in pts_i:
+                if C is None:
+                    C = X[j]
+                else:
+                    C = C.merge(X[j])
+
+            # Compute cost, once the center has been found
+            for j in pts_i:
+                costs[i] += C.distance(X[j])
+
+            self.components_.push(C)
+
+
+        # TODO:   2013-08-05 16:44:34 by Brian McFee <brm2132@columbia.edu>
+        # implement a remove operation within the models
+        
+        step = 0
+
+        while self.max_iter is None or step < self.max_iter:
+
+
+            for i in range(n):
+                # find the possible reassignments of i
+                moves = list(set([labels[j] for j in E[i]]) - set([labels[i]]))
+    
+                # No legal moves, skip i
+                if not moves:
+                    continue
+
+                Ci_minus    = self.components[labels[i]].remove(X[i])
+
+                # Cost of removing i from its current center
+                cost_delta  = self.components_[labels[i]].distance(X[i]) - costs[labels[i]]
+
+                new_centers = []
+                for m in moves:
+                    C = self.components_[m].merge(X[i])
+                    # cost-change of adding i to cluster m
+                    new_centers.append( (C.cost() - self.components_[m].cost(), C, m) )
+                    # oy, cost of the move is expensive to recompute
+
+                best_cost, best_C, best_idx = min(new_centers)
+
+                # Is there a net gain to doing this swap?
+                if best_cost + cost_delta < 0:
+                    self.components_[labels[i]]     = Ci_minus
+                    self.components_[best_idx]      = best_C
+                    labels[i]                       = best_idx
+                    # update cost
+
+
+
+        self.labels_ = labels
+
+                
 class Gaussian(object):
     '''A container class for gaussian models'''
     
