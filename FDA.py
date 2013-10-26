@@ -59,7 +59,8 @@ class FDA(BaseEstimator, TransformerMixin):
 
         self.e_vals_        = e_vals
         self.e_vecs_        = e_vecs
-        self.components_    = e_vecs.T[:n_classes,:]
+        
+        self.components_    = e_vecs.T[:min(n_classes, d_orig),:]
 
         return self
 
