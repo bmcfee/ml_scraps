@@ -36,7 +36,7 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
         '''
 
         if clusterer is None:
-            self.clusterer = sklearn.cluster.MiniBatchKMeans(k=n_atoms)
+            self.clusterer = sklearn.cluster.MiniBatchKMeans(n_clusters=n_atoms)
         else:
             self.clusterer = clusterer
 
