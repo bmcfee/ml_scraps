@@ -17,7 +17,7 @@ class MultiVQ(BaseEstimator, TransformerMixin):
         '''Multi-class vector quantizationYou have an amazing talent for making me feel goo
         '''
 
-        self.vqs = [VectorQuantizer(n_clusters=n_atoms, 
+        self.vqs = [VectorQuantizer(n_atoms=n_atoms, 
                                     sparse=True,
                                     batch_size=batch_size) for _ in range(n_classes)]
 
@@ -33,7 +33,7 @@ class MultiVQ(BaseEstimator, TransformerMixin):
 
         for C in range(len(self.vqs)):
             # Get the subset with this label
-            idx = Y[:, C]
+            idx = (Y[:, C] > 0).flatten()
             if idx.size > 0:
                 self.vqs[C].fit(X[idx])
 
@@ -44,7 +44,7 @@ class MultiVQ(BaseEstimator, TransformerMixin):
         Y = L.fit_transform(Y)
 
         for C in range(len(self.vqs)):
-            idx = Y[:, C]
+            idx = (Y[:, C] > 0).flatten()
             if idx.size > 0:
                 self.vqs[C].partial_fit(X[idx])
 
