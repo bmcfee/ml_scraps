@@ -9,11 +9,13 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 class VectorQuantizer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, clusterer=None, n_atoms=32, sparse=True, batch_size=1024):
+    def __init__(self, clusterer=None, n_atoms=32, sparse=True, batch_size=1024, n_quantizers=1):
         '''Vector quantization by closest centroid:
 
-        A[i] == 1 <=> i = argmin ||X - C_i||
-                        i
+        A[i] > 0 <=> i in argmin ||X - C_i||
+
+        This implementation also supports soft encoding by mapping to the top k
+        closest centroids.
 
         Arguments:
         ----------
@@ -33,6 +35,11 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         batch_size : int
             Number of points to transform in parallel
+
+        n_quantizers : int
+            Number of quantizers to use for each point.
+            By default, it uses 1 (hard VQ).
+            Larger values use multiple codewords to represent each point.
         '''
 
         if clusterer is None:
@@ -40,10 +47,10 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
         else:
             self.clusterer = clusterer
 
-        self.sparse = sparse
-        self.batch_size = batch_size
-
-
+        self.sparse         = sparse
+        self.batch_size     = batch_size
+        self.n_quantizers   = n_quantizers
+    
     def fit(self, X):
         '''Fit the codebook to the data
 
@@ -70,7 +77,6 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         return self
 
-
     def transform(self, X):
         '''Encode the data by VQ.
 
@@ -88,13 +94,13 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
 
         n = X.shape[0]
 
-        hits = np.empty(n, dtype=np.uint16)
+        hits = np.empty((n, self.n_quantizers), dtype=np.uint16)
 
         for j in range(0, n, self.batch_size):
             j_end = min(n, j + self.batch_size)
 
-            XC = np.dot(X[j:j_end], C.T) - self.center_norms_
-            hits[j:j_end] = XC.argmax(axis=1)
+            XC = - np.dot(X[j:j_end], C.T) + self.center_norms_
+            hits[j:j_end] = XC.argsort(axis=1)[:,:self.n_quantizers]
 
         if self.sparse:
             X_new = scipy.sparse.lil_matrix( (n, C.shape[0]))
@@ -105,6 +111,6 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
             X_new[i, hits[i]] = True
 
         if self.sparse:
-            X_new = X_new.tocsc()
+            X_new = X_new.tocsr()
 
         return X_new
