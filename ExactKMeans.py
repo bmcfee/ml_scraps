@@ -6,8 +6,8 @@ from sklearn.base import BaseEstimator
 class ExactKMeans(BaseEstimator):
     """Compute the exact k-means solution by brute-force search.  Suitable for small problems."""
     
-    def __init__(self, n_components=2):
-        self.n_components = n_components
+    def __init__(self, n_clusters=2):
+        self.n_clusters = n_clusters
         pass
     
     def subsets(self, arr):
@@ -51,7 +51,7 @@ class ExactKMeans(BaseEstimator):
         
         n = X.shape[0]
         
-        for assignment in self.k_subset(range(n), self.n_components):
+        for assignment in self.k_subset(range(n), self.n_clusters):
                 
             # Compute the cost
             cost, means = self.cost(X, assignment)
