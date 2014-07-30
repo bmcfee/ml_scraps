@@ -103,7 +103,7 @@ class VectorQuantizer(BaseEstimator, TransformerMixin):
             hits[j:j_end] = XC.argsort(axis=1)[:,:self.n_quantizers]
 
         if self.sparse:
-            X_new = scipy.sparse.lil_matrix( (n, C.shape[0]))
+            X_new = scipy.sparse.lil_matrix( (n, C.shape[0]), dtype=bool)
         else:
             X_new = np.zeros( (n, C.shape[0]), dtype=bool )
         

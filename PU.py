@@ -40,42 +40,37 @@ class PositiveUnlabeled(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin
 
     def __init__(self, estimator, sample_estimator='gmean'):
 
-        ests = {'mean': self.__mean,
+        self.__ests = {'mean': self.__mean,
                 'gmean': self.__gmean,
                 'max': self.__max,
                 'ucb': self.__ucb,
                 'gucb': self.__gucb}
 
-        assert hasattr(estimator, 'predict_proba')
-        assert sample_estimator in ests
-
-        self.estimator_ = estimator
-        self.sample_estimator_ = sample_estimator
-        self.sample_estimator_function_ = ests[sample_estimator]
-
+        self.estimator = estimator
+        self.sample_estimator = sample_estimator
+        assert hasattr(self.estimator, 'predict_proba')
+        assert self.sample_estimator in self.__ests
 
     def fit(self, X, Y):
         # Fit the estimator
-        self.estimator_.fit(X, Y)
+        self.estimator.fit(X, Y)
 
         # Estimate the probability calibration
         idx = np.argwhere(Y > 0).ravel()
 
-        positive_probabilities = self.estimator_.predict_proba(X[idx])[:, 1]
+        positive_probabilities = self.estimator.predict_proba(X[idx])[:, 1]
 
-        self.calibration_ = self.sample_estimator_function_(positive_probabilities)
-        #probabilities = self.estimator_.predict_proba(X)[:, 1]
-
-        #self.calibration_ = np.sum(probabilities * Y) / np.sum(probabilities)
+        self.calibration_ = self.__ests[self.sample_estimator](positive_probabilities)
 
         self.log_calibration_ = np.log(self.calibration_)
 
 
     def predict_proba(self, X):
 
-        # A brutal hack here to clip our scaled probability estimates into the feasible range
+        # A brutal hack here to clip our scaled probability estimates 
+        # into the feasible range
         pos_proba = np.minimum(1.0 - np.finfo(float).eps,
-                               self.estimator_.predict_proba(X)[:, 1] / self.calibration_)
+                               self.estimator.predict_proba(X)[:, 1] / self.calibration_)
 
         neg_proba = 1.0 - pos_proba
 
