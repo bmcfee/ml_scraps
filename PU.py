@@ -38,20 +38,26 @@ class PositiveUnlabeled(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin
         return np.max(p)
 
 
-    def __init__(self, estimator, sample_estimator='gmean'):
+    def __init__(self, estimator, sample_estimator='mean'):
 
-        self.__ests = {'mean': self.__mean,
-                'gmean': self.__gmean,
-                'max': self.__max,
-                'ucb': self.__ucb,
-                'gucb': self.__gucb}
+        __ests = {'mean': self.__mean,
+                  'gmean': self.__gmean,
+                  'max': self.__max,
+                  'ucb': self.__ucb,
+                  'gucb': self.__gucb}
 
         self.estimator = estimator
         self.sample_estimator = sample_estimator
         assert hasattr(self.estimator, 'predict_proba')
-        assert self.sample_estimator in self.__ests
+        assert self.sample_estimator in __ests
 
     def fit(self, X, Y):
+        __ests = {'mean': self.__mean,
+                  'gmean': self.__gmean,
+                  'max': self.__max,
+                  'ucb': self.__ucb,
+                  'gucb': self.__gucb}
+
         # Fit the estimator
         self.estimator.fit(X, Y)
 
@@ -60,7 +66,7 @@ class PositiveUnlabeled(sklearn.base.BaseEstimator, sklearn.base.ClassifierMixin
 
         positive_probabilities = self.estimator.predict_proba(X[idx])[:, 1]
 
-        self.calibration_ = self.__ests[self.sample_estimator](positive_probabilities)
+        self.calibration_ = __ests[self.sample_estimator](positive_probabilities)
 
         self.log_calibration_ = np.log(self.calibration_)
 
