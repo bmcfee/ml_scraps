@@ -47,8 +47,11 @@ def filtered_stratified_split(ids, splitter, Y, **kwargs):
             Y_id.append(Y[i])
             
     # 2: CV split on Yid
-    splits = splitter(Y_id, **kwargs)
-    
+    try:
+        splits = splitter(Y_id, **kwargs)
+    except:
+        splits = splitter(len(Y_id), **kwargs)
+
     # 3: Map CV indices back to Y space
     for meta_train, meta_test in splits:
         yield (unfold(meta_train, X_id, indices), 

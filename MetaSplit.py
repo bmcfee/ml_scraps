@@ -4,6 +4,7 @@
 import sklearn.cross_validation
 import sklearn.preprocessing
 import collections
+import numpy as np
 
 class MetaShuffleSplit(sklearn.cross_validation.BaseShuffleSplit):
     '''Analogous to ShuffleSplit, except partitioning happens over
@@ -72,7 +73,7 @@ class MetaShuffleSplit(sklearn.cross_validation.BaseShuffleSplit):
             for raw in raw_test:
                 test.extend(id_mapping[raw])
 
-            yield train, test
+            yield np.asarray(train), np.asarray(test)
 
     def __repr__(self):
         return ('%s(meta_ids=%s, n_iter=%d, test_size=%s, '
