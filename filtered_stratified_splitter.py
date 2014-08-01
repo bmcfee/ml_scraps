@@ -1,5 +1,8 @@
+import numpy as np
+
 def filtered_stratified_split(ids, splitter, Y, **kwargs):
-    '''Cross-validation split filtration. Ensures that points of the same meta-id end up on the same side of the split
+    '''Cross-validation split filtration. Ensures that points of the same meta-id 
+    end up on the same side of the split
 
     input:
 
@@ -23,10 +26,10 @@ def filtered_stratified_split(ids, splitter, Y, **kwargs):
         for i in meta_ids:
             split_ids.extend(X_id[i])
             
-        split_ids = numpy.array(split_ids)
+        split_ids = np.array(split_ids)
         
         if not indices:
-            z = numpy.zeros(n, dtype=bool)
+            z = np.zeros(n, dtype=bool)
             z[split_ids] = True
             return z
     
