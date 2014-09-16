@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator
 class HartiganOnline(BaseEstimator):
     '''Online Hartigan clustering.'''
 
-    def __init__(self, n_clusters=2, max_iter=10, shuffle=True, verbose=False):
+    def __init__(self, n_clusters=2, max_iter=10, shuffle=True, spherical=False, verbose=False):
         '''Initialize a Hartigan clusterer.
 
         :parameters:
@@ -18,6 +18,10 @@ class HartiganOnline(BaseEstimator):
 
         - shuffle : bool
             Shuffle the data between each pass
+
+        - spherical : bool
+            Spherical k-means or standard.
+            If True, cluster centers are constrained to live on the unit l2 sphere.
 
         - verbose : bool
             Display debugging output?
@@ -34,6 +38,7 @@ class HartiganOnline(BaseEstimator):
         self.max_iter       = max_iter
         self.shuffle        = shuffle
         self.verbose        = verbose
+        self.spherical      = spherical
 
         self.cluster_sizes_     = np.zeros(self.n_clusters)
 
@@ -79,6 +84,12 @@ class HartiganOnline(BaseEstimator):
 
             # Update the center
             self.cluster_centers_[j] = (self.cluster_sizes_[j] * self.cluster_centers_[j] + xi) / (1.0 + self.cluster_sizes_[j])
+
+            # If we're doing spherical k-means, normalize after the update
+            if self.spherical:
+                renorm = np.sqrt(np.sum(self.cluster_centers[j]**2))
+                if renorm > 0:
+                    self.cluster_centers_[j] /= renorm
 
             # Update the counter
             self.cluster_sizes_[j] += 1.0
