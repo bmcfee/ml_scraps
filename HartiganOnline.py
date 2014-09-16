@@ -87,7 +87,7 @@ class HartiganOnline(BaseEstimator):
 
             # If we're doing spherical k-means, normalize after the update
             if self.spherical:
-                renorm = np.sqrt(np.sum(self.cluster_centers[j]**2))
+                renorm = np.sqrt(np.sum(self.cluster_centers_[j]**2))
                 if renorm > 0:
                     self.cluster_centers_[j] /= renorm
 
