@@ -14,7 +14,7 @@ class MultiVQ(BaseEstimator, TransformerMixin):
                         n_classes=2, 
                         sparse=True, 
                         batch_size=1024):
-        '''Multi-class vector quantizationYou have an amazing talent for making me feel goo
+        '''Multi-class vector quantization
         '''
 
         self.vqs = [VectorQuantizer(n_atoms=n_atoms, 
